@@ -34,8 +34,8 @@ class Main {
               if(isImported){
                   importedTaxAmt =5.0;
               }
-              double regular = roundUpToNearest005((price * regularTax)/100);
-              double importedtax = roundUpToNearest005((price * importedTaxAmt)/100);
+              double regular = roundUpToNearest((price * regularTax)/100);
+              double importedtax = roundUpToNearest((price * importedTaxAmt)/100);
               double itemTax = regular+importedtax;
              double totalItemPrice = price + itemTax;
              totalTax += itemTax;
@@ -46,7 +46,7 @@ class Main {
         System.out.printf("Total: %.2f%n", total);
    }
    
-   private static double roundUpToNearest005(double amount) {
+   private static double roundUpToNearest(double amount) {
         return Math.ceil(amount * 20.0) / 20.0;
     }
 }
