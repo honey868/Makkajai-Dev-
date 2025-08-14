@@ -1,52 +1,97 @@
 import java.util.*;
+import java.util.stream.Collectors;
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        TaxCalculator calculator = new TaxCalculator();
+        Receipt receipt = new Receipt();
 
-class Main {
-   static final List<String> EXEMPT_CATEGORIES = Arrays.asList("book","books", "chocolates","chocolate" ,"pills","pill");
-   public static void main(String args[]){
-      
-      Scanner sc = new Scanner(System.in);
-        List<String> words = new ArrayList<>();
         while (sc.hasNextLine()) {
-            String line = sc.nextLine();
-            if (line.trim().isEmpty()) {
-                break;
-            }
-            words.add(line);
-        }
-        double totalTax = 0.0;
-        double total = 0.0;
-       for(String word : words){
-               String[] firstLine = word.split("at ");
-               String namePart = firstLine[0];
-               double price = Double.parseDouble(firstLine[1]);
-               int firstSpace = namePart.indexOf(' ');
-               int quantity = Integer.parseInt(namePart.substring(0, firstSpace));
-               String itemName = namePart.substring(firstSpace + 1);
-              
-              boolean isImported = itemName.contains("imported");
-              boolean isExempt = EXEMPT_CATEGORIES.stream().anyMatch(category -> itemName.contains(category));
+    String line = sc.nextLine();
+    if (line.trim().isEmpty()) break;
+    Product product = calculator.parseProduct(line);
+    receipt.addProduct(product);
+}
 
-              double regularTax =0.0;
-              double importedTaxAmt=0.0;
-              if(!isExempt){
-                  regularTax =10.0;
-              }
-              if(isImported){
-                  importedTaxAmt =5.0;
-              }
-              double regular = roundUpToNearest((price * regularTax)/100);
-              double importedtax = roundUpToNearest((price * importedTaxAmt)/100);
-              double itemTax = regular+importedtax;
-             double totalItemPrice = price + itemTax;
-             totalTax += itemTax;
-             total += totalItemPrice;
-             System.out.printf("%d %s: %.2f%n", quantity, itemName, totalItemPrice);
-        }
-        System.out.printf("Sales Taxes: %.2f%n", totalTax);
-        System.out.printf("Total: %.2f%n", total);
-   }
-   
-   private static double roundUpToNearest(double amount) {
+        receipt.printSummary();
+    }
+}
+class Product {
+    private final int quantity;
+    private final String name;
+    private final double price;
+    private final boolean imported;
+    private final boolean exempt;
+
+    public Product(int quantity, String name, double price, boolean imported, boolean exempt) {
+        this.quantity = quantity;
+        this.name = name;
+        this.price = price;
+        this.imported = imported;
+        this.exempt = exempt;
+    }
+
+    public int getQuantity() { return quantity; }
+    public String getName() { return name; }
+    public double getPrice() { return price; }
+    public boolean isImported() { return imported; }
+    public boolean isExempt() { return exempt; }
+}
+
+class TaxCalculator {
+    private static final double BASIC_TAX = 10.0;
+    private static final double IMPORT_TAX = 5.0;
+    private static final List<String> EXEMPT_CATEGORIES = Arrays.asList("book", "books", "chocolates", "chocolate", "pills", "pill");
+
+    public Product parseProduct(String inputLine) {
+        String[] parts = inputLine.split(" at ");
+        if (parts.length != 2) throw new IllegalArgumentException("Invalid input format: " + inputLine);
+
+        String namePart = parts[0].trim();
+        double price = Double.parseDouble(parts[1].trim());
+
+        int firstSpace = namePart.indexOf(' ');
+        int quantity = Integer.parseInt(namePart.substring(0, firstSpace));
+        String itemName = namePart.substring(firstSpace + 1).trim();
+
+        boolean imported = itemName.toLowerCase().contains("imported");
+        boolean exempt = EXEMPT_CATEGORIES.stream()
+                .anyMatch(category -> itemName.toLowerCase().contains(category));
+
+        return new Product(quantity, itemName, price, imported, exempt);
+    }
+
+    public double calculateTax(Product product) {
+        double taxRate = 0.0;
+        if (!product.isExempt()) taxRate += BASIC_TAX;
+        if (product.isImported()) taxRate += IMPORT_TAX;
+        return roundUpToNearest((product.getPrice() * taxRate) / 100);
+    }
+
+    private double roundUpToNearest(double amount) {
         return Math.ceil(amount * 20.0) / 20.0;
     }
 }
+
+class Receipt {
+    private final List<Product> products = new ArrayList<>();
+    private final TaxCalculator calculator = new TaxCalculator();
+    private double totalTax = 0.0;
+    private double total = 0.0;
+
+    public void addProduct(Product product) {
+        double tax = calculator.calculateTax(product);
+        double totalPrice = product.getPrice() + tax;
+        totalTax += tax;
+        total += totalPrice;
+
+        System.out.printf("%d %s: %.2f%n", product.getQuantity(), product.getName(), totalPrice);
+    }
+
+    public void printSummary() {
+        System.out.printf("Sales Taxes: %.2f%n", totalTax);
+        System.out.printf("Total: %.2f%n", total);
+    }
+}
+
+
